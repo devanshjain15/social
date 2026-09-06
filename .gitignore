@@ -1,0 +1,41 @@
+# Build output
+bin/
+*.exe
+*.exe~
+*.out
+*.test
+
+# Logs
+*.log
+
+# Go coverage files
+coverage.out
+coverage.html
+
+# Go workspace files
+go.work
+go.work.sum
+
+# Environment / secrets
+.envrc
+.env
+.env.*
+!.env.example
+
+# IDE / editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Temporary files
+tmp/
+temp/
+
+# Air live-reload files
+.air.toml
+.air/
+
+# OS files
+Thumbs.db
