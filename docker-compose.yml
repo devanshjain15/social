@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:18
+    container_name: local_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: admin
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    # Sets shared memory limit properly for Postgres inside Docker
+    shm_size: 128mb
+
+volumes:
+  pgdata:
+    driver: local
