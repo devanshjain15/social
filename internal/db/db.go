@@ -12,13 +12,12 @@ func New(addr string, maxOpenConns, maxIdleConns int, maxIdleTime string) (*sql.
 		return nil, err
 	}
 
-	defer db.Close()
-
 	db.SetMaxOpenConns(maxOpenConns)
 	db.SetMaxIdleConns(maxIdleConns)
 
 	t, err := time.ParseDuration(maxIdleTime)
 	if err != nil {
+		db.Close()
 		return nil, err
 	}
 	db.SetConnMaxIdleTime(t) // use maxIdleTime
@@ -26,6 +25,7 @@ func New(addr string, maxOpenConns, maxIdleConns int, maxIdleTime string) (*sql.
 	defer cancel()
 
 	if err := db.PingContext(ctx); err != nil {
+		db.Close()
 		return nil, err
 	}
 

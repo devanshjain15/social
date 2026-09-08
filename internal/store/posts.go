@@ -23,12 +23,12 @@ type PostStore struct {
 
 func (s *PostStore) Create(ctx context.Context, post *Post) error {
 	query := `
-		INSERT INTO USERS (content, title, tags, user_id) 
+		INSERT INTO POSTS (title, content, tags, user_id) 
 		VALUES ($1, $2, $3, $4) 
 		RETURNING id, created_at, updated_at
 	`
 
-	err := s.db.QueryRowContext(ctx, query, post.Content, post.Title, pq.Array(post.Tags)).Scan(post.Id, post.CreatedAt, post.UpdatedAt) // what is this scan doing and when we are creating a new post using the Post struct where does the created and updated timestamp values are obtained does scan does it?
+	err := s.db.QueryRowContext(ctx, query, post.Title, post.Content, pq.Array(post.Tags), post.UserId).Scan(&post.Id, &post.CreatedAt, &post.UpdatedAt) // what is this scan doing and when we are creating a new post using the Post struct where does the created and updated timestamp values are obtained does scan does it?
 	if err != nil {
 		return err
 	}
