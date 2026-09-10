@@ -16,6 +16,7 @@ type Post struct {
 	UserId    int64    `json:"user_id"`
 	CreatedAt string   `json:"created_at"`
 	UpdatedAt string   `json:"updated_at"`
+	Comments []Comment `json:"comments"`
 }
 
 type PostStore struct {
