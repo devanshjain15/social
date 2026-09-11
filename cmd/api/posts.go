@@ -99,7 +99,6 @@ func (app *application) deletePostHandler(w http.ResponseWriter, r *http.Request
 }
 
 // what about updating the tags add feature later
-
 func (app *application) updatePostHandler(w http.ResponseWriter, r *http.Request) {
 	post := getPostFromCtx(r)
 
