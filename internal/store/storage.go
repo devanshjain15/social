@@ -14,6 +14,8 @@ type Storage struct {
 	Posts interface { // why interface though and if it is being used at multiple places why not create a type out of it?
 		Create(context.Context, *Post) error
 		GetById(context.Context, int64) (*Post, error)
+		Delete(context.Context, int64) error
+		Update(context.Context, *Post) error 
 	}
 
 	Users interface {
