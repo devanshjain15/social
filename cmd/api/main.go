@@ -28,6 +28,7 @@ func main() {
 	} else {
 		log.Println("Database connection pool established!")
 	}
+	defer db.Close()
 
 	store := store.NewStorage(db)
 

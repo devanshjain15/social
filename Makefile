@@ -20,4 +20,7 @@ migrate-up:
 migrate-down: 
 	migrate -path $(MIGRATION_PATH) -database $(DB_ADDR) down
 
+seed: 
+	go run ./internal/db/seed/
+
 .PHONY: postgres-init createdb dropdb migration-init migrate-up migrate-down

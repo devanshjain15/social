@@ -24,7 +24,17 @@ func (s *UserStore) Create(ctx context.Context, user *User) error {
 		RETURNING id, created_at
 	`
 
-	err := s.db.QueryRowContext(ctx, query, user.Username, user.Email, user.Password).Scan(user.Id, user.CreatedAt)
+	err := s.db.QueryRowContext(
+		ctx,
+		query,
+		user.Username,
+		user.Email,
+		user.Password,
+	).Scan(
+		&user.Id,
+		&user.CreatedAt,
+	)
+
 	if err != nil {
 		return err
 	}

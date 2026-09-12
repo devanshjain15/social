@@ -15,7 +15,7 @@ type Storage struct {
 		Create(context.Context, *Post) error
 		GetById(context.Context, int64) (*Post, error)
 		Delete(context.Context, int64) error
-		Update(context.Context, *Post) error 
+		Update(context.Context, *Post) error
 	}
 
 	Users interface {
@@ -23,6 +23,7 @@ type Storage struct {
 	}
 
 	Comments interface {
+		Create(context.Context, *Comment) error
 		GetByPostId(context.Context, int64) ([]Comment, error) // pointer?
 	}
 }
