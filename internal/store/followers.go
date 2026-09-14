@@ -34,6 +34,7 @@ func (s *FollowerStore) Follow(ctx context.Context, followerId int64, userId int
 
 }
 
+// idempotency
 func (s *FollowerStore) Unfollow(ctx context.Context, followerId int64, userId int64) error {
 	query := `
 		DELETE FROM FOLLOWERS WHERE user_id = $1 AND follower_id = $2
