@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"time"
 
 	"github.com/lib/pq"
 )
@@ -32,7 +31,7 @@ func (s *PostStore) Create(ctx context.Context, post *Post) error {
 		RETURNING id, created_at, updated_at
 	`
 
-	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
 	defer cancel()
 
 	err := s.db.QueryRowContext(ctx, query, post.Title, post.Content, pq.Array(post.Tags), post.UserId).Scan(&post.Id, &post.CreatedAt, &post.UpdatedAt) // what is this scan doing and when we are creating a new post using the Post struct where does the created and updated timestamp values are obtained does scan does it?
@@ -50,7 +49,7 @@ func (s *PostStore) GetById(ctx context.Context, postId int64) (*Post, error) {
 		WHERE id = $1
 	`
 
-	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
 	defer cancel()
 
 	err := s.db.QueryRowContext(ctx, query, postId).Scan(&post.Id, &post.Title, &post.Content, &post.UserId, &post.CreatedAt, pq.Array(&post.Tags), &post.UpdatedAt, &post.Version)
@@ -70,7 +69,7 @@ func (s *PostStore) Delete(ctx context.Context, postId int64) error {
 		DELETE FROM POSTS WHERE id = $1
 	`
 
-	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
 	defer cancel()
 
 	res, err := s.db.ExecContext(ctx, query, postId)
@@ -97,7 +96,7 @@ func (s *PostStore) Update(ctx context.Context, post *Post) error {
 		WHERE id = $1 AND version = $4
 		RETURNING version
 	`
-	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
 	defer cancel()
 
 	err := s.db.QueryRowContext(ctx, query, post.Id, post.Title, post.Content, post.Version).Scan(&post.Version)

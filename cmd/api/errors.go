@@ -19,3 +19,8 @@ func (app *application) notFoundError(w http.ResponseWriter, r *http.Request, er
 	log.Printf("Resource Not Found Error Occurred => Method: %s Path: %s Error: %s", r.Method, r.URL.Path, err)
 	writeErrorJson(w, http.StatusNotFound, "Resource that user looking for not found!")
 }
+
+func (app *application) conflictResponse(w http.ResponseWriter, r *http.Request, err error) {
+	log.Printf("Conflict Error Occurred => Method: %s Path: %s Error: %s", r.Method, r.URL.Path, err)
+	writeErrorJson(w, http.StatusConflict, "Not Found!")
+}
