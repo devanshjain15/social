@@ -17,6 +17,11 @@ func (app *application) getUserFeedHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	if err := validate.Struct(fq); err != nil {
+		app.badRequestError(w, r, err)
+		return
+	}
+
 	userId := 5
 	ctx := r.Context()
 	feed, err := app.store.Posts.GetUserFeed(ctx, int64(userId), fq)

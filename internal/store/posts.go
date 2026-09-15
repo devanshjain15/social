@@ -130,22 +130,43 @@ func (s *PostStore) GetUserFeed(ctx context.Context, userId int64, fq PaginatedF
 			p.updated_at,
 			u.username,
 			COUNT(DISTINCT c.id) AS comment_count
-		FROM posts p
-		LEFT JOIN comments c ON p.id = c.post_id
-		LEFT JOIN users u ON p.user_id = u.id
+		FROM
+			posts p
+			LEFT JOIN comments c ON p.id = c.post_id
+			LEFT JOIN users u ON p.user_id = u.id
 		WHERE
-		p.user_id = $1
-		OR EXISTS (
-			SELECT 1 FROM followers f
-			WHERE f.user_id = p.user_id AND f.follower_id = $1
-		)
-		GROUP BY p.id, u.id
-		ORDER BY p.created_at ` + fq.Sort +
-		`
-		LIMIT $2 OFFSET $3
+			(
+				p.user_id = $1
+				OR EXISTS (
+					SELECT
+						1
+					FROM
+						followers f
+					WHERE
+						f.user_id = p.user_id
+						AND f.follower_id = $1
+				)
+			)
+			AND (
+				$5 = ''
+				OR p.title ILIKE '%' || $5 || '%'
+				OR p.content ILIKE '%' || $5 || '%'
+			)
+			AND (
+				$4::varchar[] IS NULL
+				OR $4::varchar[] = '{}'
+				OR p.tags @> $4::varchar[]
+			)
+		GROUP BY
+			p.id,
+			u.id
+		ORDER BY
+			p.created_at ` + fq.Sort + `
+		LIMIT
+			$2 OFFSET $3
 	`
 
-	rows, err := s.db.QueryContext(ctx, query, userId, fq.Limit, fq.Offset)
+	rows, err := s.db.QueryContext(ctx, query, userId, fq.Limit, fq.Offset, pq.Array(fq.Tags), fq.Search)
 	if err != nil {
 		return nil, err
 	}
@@ -168,6 +189,8 @@ func (s *PostStore) GetUserFeed(ctx context.Context, userId int64, fq PaginatedF
 		); err != nil {
 			return nil, err
 		}
+
+		p.User.Id = p.UserId
 
 		feed = append(feed, p)
 	}
