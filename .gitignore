@@ -39,3 +39,6 @@ temp/
 
 # OS files
 Thumbs.db
+
+# docs
+docs/*
