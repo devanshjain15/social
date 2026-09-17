@@ -23,4 +23,7 @@ migrate-down:
 seed: 
 	go run ./internal/db/seed/
 
-.PHONY: postgres-init createdb dropdb migration-init migrate-up migrate-down
+genereate-docs: 
+	swag init -g ./api/main.go -d cmd,internal && swag fmt
+
+.PHONY: postgres-init createdb dropdb migration-init migrate-up migrate-down generate-docs

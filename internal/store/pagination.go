@@ -62,9 +62,9 @@ func (fq PaginatedFeedQuery) Parse(r *http.Request) (PaginatedFeedQuery, error) 
 	}
 
 	search := q.Get("search")
-    if search != "" {
-       fq.Search = search
-    }
+	if search != "" {
+		fq.Search = search
+	}
 
 	since := q.Get("since")
 	if since != "" {
