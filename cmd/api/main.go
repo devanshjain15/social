@@ -6,6 +6,8 @@ import (
 	"social/internal/db"
 	"social/internal/env"
 	"social/internal/store"
+
+	"go.uber.org/zap"
 )
 
 const VERSION string = "0.0.1"
@@ -39,6 +41,9 @@ func main() {
 		env: env.GetString("ENV", "DEV"),
 	}
 
+	logger := zap.Must(zap.NewProduction()).Sugar()
+	defer logger.Sync()
+
 	db, err := db.New(config.db.addr, config.db.maxOpenConns, config.db.maxIdleConns, config.db.maxIdleTime)
 	if err != nil {
 		log.Fatalf("Database unreachable: %v", err)
@@ -52,6 +57,7 @@ func main() {
 	app := &application{
 		config: config,
 		store:  store,
+		logger: logger,
 	}
 	mux := app.mount()
 	log.Fatal(app.run(mux))
