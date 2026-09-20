@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"time"
 
 	"social/internal/db"
 	"social/internal/env"
@@ -39,6 +40,9 @@ func main() {
 			maxIdleTime:  env.GetString("DB_MAX_IDLE_TIME", "15m"),
 		},
 		env: env.GetString("ENV", "DEV"),
+		mail: mailConfig{
+			exp: time.Hour,
+		},
 	}
 
 	logger := zap.Must(zap.NewProduction()).Sugar()

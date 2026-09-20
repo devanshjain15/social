@@ -8,8 +8,9 @@ import (
 )
 
 var (
-	ErrNotFound          = errors.New("Record not found!")
-	ErrConflict          = errors.New("Resource already exists")
+	ErrNotFound = errors.New("Record not found!")
+	ErrConflict = errors.New("Resource already exists")
+
 	QueryTimeoutDuration = time.Second * 5
 )
 
@@ -24,7 +25,10 @@ type Storage struct {
 
 	Users interface {
 		GetById(context.Context, int64) (*User, error)
-		Create(context.Context, *User) error
+		Create(context.Context, *sql.Tx, *User) error
+		CreateAndInvite(context.Context, *User, string, time.Duration) error
+		Update(context.Context, *sql.Tx, *User) error
+		Activate(context.Context, string) error
 	}
 
 	Comments interface {
@@ -45,4 +49,18 @@ func NewStorage(db *sql.DB) Storage {
 		Comments:  &CommentStore{db},
 		Followers: &FollowerStore{db},
 	}
+}
+
+func withTx(ctx context.Context, db *sql.DB, fn func(*sql.Tx) error) error {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	if err := fn(tx); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
 }
