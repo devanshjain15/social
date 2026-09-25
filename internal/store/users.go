@@ -18,17 +18,17 @@ type User struct {
 	Id        int64    `json:"id"`
 	Username  string   `json:"username"`
 	Email     string   `json:"email"`
-	Password  password `json:"-"`
+	Password  Password `json:"-"`
 	CreatedAt string   `json:"created_at"`
 	IsActive  bool     `json:"is_active"`
 }
 
-type password struct {
+type Password struct {
 	text *string
 	hash []byte
 }
 
-func (p *password) Set(text string) error {
+func (p *Password) Set(text string) error {
 	hash, err := bcrypt.GenerateFromPassword([]byte(text), bcrypt.DefaultCost)
 	if err != nil {
 		return err
@@ -119,25 +119,6 @@ func (s *UserStore) CreateAndInvite(ctx context.Context, user *User, token strin
 	})
 }
 
-func (s *UserStore) createUserInvite(ctx context.Context, tx *sql.Tx, userId int64, token string, exp time.Duration) error {
-	query := `
-		INSERT INTO USER_INVITATIONS 
-		(token, user_id, expiry) 
-		VALUES 
-		($1, $2, $3) 
-	`
-
-	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
-	defer cancel()
-
-	_, err := tx.ExecContext(ctx, query, token, userId, time.Now().Add(exp))
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (s *UserStore) Activate(ctx context.Context, token string) error {
 	// 1. check user exists
 	// 2. update/activate the user
@@ -154,12 +135,71 @@ func (s *UserStore) Activate(ctx context.Context, token string) error {
 			return err
 		}
 
-		if err := s.DeleteUserToken(ctx, tx, token, user.Id); err != nil {
+		if err := s.deleteUserToken(ctx, tx, user.Id); err != nil {
 			return err
 		}
 
 		return nil
 	})
+}
+
+func (s *UserStore) Update(ctx context.Context, tx *sql.Tx, user *User) error {
+	query := `
+		UPDATE USERS 
+		SET username = $2, email = $3, is_active = $4
+		WHERE id = $1 
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
+	defer cancel()
+
+	_, err := tx.ExecContext(ctx, query, user.Id, user.Username, user.Email, user.IsActive)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *UserStore) Delete(ctx context.Context, userId int64) error {
+	return withTx(ctx, s.db, func(tx *sql.Tx) error {
+		// Delete the user
+		if err := s.deleteUser(ctx, tx, userId); err != nil {
+			return err
+		}
+
+		if err := s.deleteUserToken(ctx, tx, userId); err != nil {
+			return err
+		}
+		// Delete the invite token
+		return nil
+	})
+}
+
+func (s *UserStore) deleteUser(ctx context.Context, tx *sql.Tx, userId int64) error {
+	query := `
+		DELETE FROM USERS WHERE id = $1 
+	`
+
+	_, err := tx.ExecContext(ctx, query, userId)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *UserStore) deleteUserToken(ctx context.Context, tx *sql.Tx, userId int64) error {
+	query := `
+		DELETE FROM USER_INVITATIONS WHERE user_id = $1
+	`
+
+	_, err := tx.ExecContext(ctx, query, userId)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *UserStore) getUserFromInvitation(ctx context.Context, tx *sql.Tx, token string, user *User) error {
@@ -193,30 +233,18 @@ func (s *UserStore) getUserFromInvitation(ctx context.Context, tx *sql.Tx, token
 	return nil
 }
 
-func (s *UserStore) DeleteUserToken(ctx context.Context, tx *sql.Tx, token string, userId int64) error {
+func (s *UserStore) createUserInvite(ctx context.Context, tx *sql.Tx, userId int64, token string, exp time.Duration) error {
 	query := `
-		DELETE FROM USER_INVITATIONS WHERE token = $1 AND user_id = $2 
-	`
-
-	_, err := tx.ExecContext(ctx, query, token, userId)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *UserStore) Update(ctx context.Context, tx *sql.Tx, user *User) error {
-	query := `
-		UPDATE USERS 
-		SET username = $2, email = $3, is_active = $4
-		WHERE id = $1 
+		INSERT INTO USER_INVITATIONS 
+		(token, user_id, expiry) 
+		VALUES 
+		($1, $2, $3) 
 	`
 
 	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
 	defer cancel()
 
-	_, err := tx.ExecContext(ctx, query, user.Id, user.Username, user.Email, user.IsActive)
+	_, err := tx.ExecContext(ctx, query, token, userId, time.Now().Add(exp))
 	if err != nil {
 		return err
 	}

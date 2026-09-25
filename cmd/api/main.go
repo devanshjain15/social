@@ -6,6 +6,7 @@ import (
 
 	"social/internal/db"
 	"social/internal/env"
+	"social/internal/mailer"
 	"social/internal/store"
 
 	"go.uber.org/zap"
@@ -31,18 +32,23 @@ const VERSION string = "0.0.1"
 // @description
 func main() {
 	config := config{
-		addr:   env.GetString("ADDR", ":8080"),
+		addr:   env.GetString("ADDR", ":8000"),
 		apiURL: "localhost:8000",
 		db: dbConfig{
-			addr:         env.GetString("DB_ADDR", "postgres://admin:secret@localhost:5433/social?sslmode=disable"),
+			addr:         env.GetString("DB_ADDR", ""),
 			maxOpenConns: env.GetInt("DB_MAX_OPEN_CONNS", 30),
 			maxIdleConns: env.GetInt("DB_MAX_OPEN_CONNS", 30),
 			maxIdleTime:  env.GetString("DB_MAX_IDLE_TIME", "15m"),
 		},
-		env: env.GetString("ENV", "DEV"),
+		env: env.GetString("ENV", "PRODUCTION"),
 		mail: mailConfig{
-			exp: time.Hour,
+			exp:       time.Hour,
+			fromEmail: env.GetString("FROM_EMAIL", ""),
+			mailTrap: mailTrapConfig{
+				apiKey: env.GetString("MAILTRAP_API_KEY", ""),
+			},
 		},
+		frontendURL: env.GetString("FRONTEND_URL", "localhost:3000"),
 	}
 
 	logger := zap.Must(zap.NewProduction()).Sugar()
@@ -58,10 +64,12 @@ func main() {
 
 	store := store.NewStorage(db)
 
+	mailerClient := mailer.NewMailTrapClient(config.mail.mailTrap.apiKey, config.mail.fromEmail)
 	app := &application{
 		config: config,
 		store:  store,
 		logger: logger,
+		mailer: mailerClient,
 	}
 	mux := app.mount()
 	log.Fatal(app.run(mux))

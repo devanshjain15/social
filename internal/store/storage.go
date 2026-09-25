@@ -29,6 +29,7 @@ type Storage struct {
 		CreateAndInvite(context.Context, *User, string, time.Duration) error
 		Update(context.Context, *sql.Tx, *User) error
 		Activate(context.Context, string) error
+		Delete(context.Context, int64) error
 	}
 
 	Comments interface {
