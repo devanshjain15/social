@@ -4,10 +4,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
-	"social/internal/mailer"
 	"social/internal/store"
 
 	"github.com/go-chi/chi/v5"
@@ -73,32 +71,32 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	userWithToken := UserWithToken{
-		User:  user,
-		token: token,
-	}
+	// userWithToken := UserWithToken{
+	// 	User:  user,
+	// 	token: token,
+	// }
 
-	activationURL := fmt.Sprintf("%s/confirm/%s", app.config.frontendURL, token)
-	isProdEnv := app.config.env == "production"
-	vars := struct {
-		Username      string
-		ActivationURL string
-	}{
-		Username:      user.Username,
-		ActivationURL: activationURL,
-	}
+	// activationURL := fmt.Sprintf("%s/confirm/%s", app.config.frontendURL, token)
+	// isProdEnv := app.config.env == "production"
+	// vars := struct {
+	// 	Username      string
+	// 	ActivationURL string
+	// }{
+	// 	Username:      user.Username,
+	// 	ActivationURL: activationURL,
+	// }
 
-	err := app.mailer.Send(mailer.UserWelcomeTemplate, user.Username, user.Email, vars, !isProdEnv)
-	if err != nil {
-		app.logger.Errorw("error sending welcome email", "error", err)
-		err = app.store.Users.Delete(ctx, userWithToken.Id)
-		if err != nil {
-			app.logger.Errorw("error deleting user", "error", err)
-		}
+	// err := app.mailer.Send(mailer.UserWelcomeTemplate, user.Username, user.Email, vars, !isProdEnv)
+	// if err != nil {
+	// 	app.logger.Errorw("error sending welcome email", "error", err)
+	// 	err = app.store.Users.Delete(ctx, userWithToken.Id)
+	// 	if err != nil {
+	// 		app.logger.Errorw("error deleting user", "error", err)
+	// 	}
 
-		app.internalServerError(w, r, err)
-		return
-	}
+	// 	app.internalServerError(w, r, err)
+	// 	return
+	// }
 
 	if err := jsonResponse(w, http.StatusCreated, nil); err != nil {
 		app.internalServerError(w, r, err)
