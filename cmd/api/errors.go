@@ -23,3 +23,14 @@ func (app *application) conflictResponse(w http.ResponseWriter, r *http.Request,
 	app.logger.Errorw("Conflict Error Occurred", "method", r.Method, "path", r.URL.Path, "err", err.Error())
 	writeErrorJson(w, http.StatusConflict, "Not Found!")
 }
+
+func (app *application) unauthroizedAccessError(w http.ResponseWriter, r *http.Request, err error) {
+	app.logger.Errorw("Unauthorized Error Occurred", "method", r.Method, "path", r.URL.Path, "err", err.Error())
+	writeErrorJson(w, http.StatusUnauthorized, "Unauthorized")
+}
+
+func (app *application) unauthorizedBasicError(w http.ResponseWriter, r *http.Request, err error) {
+	app.logger.Warnf("Unauthorized Error Occurred", "method", r.Method, "path", r.URL.Path, "err", err.Error())
+	w.Header().Set("WWW-Authenticate", `Basic realm="Protected Area"`)
+	writeErrorJson(w, http.StatusUnauthorized, "Unauthorized")
+}

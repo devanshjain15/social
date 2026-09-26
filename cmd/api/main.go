@@ -48,6 +48,12 @@ func main() {
 				apiKey: env.GetString("MAILTRAP_API_KEY", ""),
 			},
 		},
+		auth: authConfig{
+			basicAuth: basicAuthConfig{
+				username: env.GetString("BASIC_AUTH_USERNAME", ""),
+				password: env.GetString("BASIC_AUTH_PASSWORD", ""),
+			},
+		},
 		frontendURL: env.GetString("FRONTEND_URL", "localhost:3000"),
 	}
 
