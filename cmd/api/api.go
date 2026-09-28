@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"social/internal/auth"
 	"social/internal/mailer"
 	"social/internal/store"
 	"time"
@@ -18,10 +19,11 @@ import (
 )
 
 type application struct {
-	config config
-	store  store.Storage
-	logger *zap.SugaredLogger
-	mailer mailer.Client
+	config        config
+	store         store.Storage
+	logger        *zap.SugaredLogger
+	mailer        mailer.Client
+	authenticator auth.Authentictor
 }
 
 type config struct {
@@ -50,11 +52,18 @@ type mailConfig struct {
 
 type authConfig struct {
 	basicAuth basicAuthConfig
+	tokenAuth tokenAuthConfig
 }
 
 type basicAuthConfig struct {
 	username string
 	password string
+}
+
+type tokenAuthConfig struct {
+	secret string
+	iss    string
+	exp    time.Duration
 }
 
 type sendGridConfig struct {
@@ -108,7 +117,8 @@ func (app *application) mount() http.Handler {
 		r.Route("/users", func(r chi.Router) {
 			r.Put("/activate/{token}", app.activateUserHandler)
 			r.Route("/{userId}", func(r chi.Router) {
-				r.Use(app.usersContextMiddleware)
+				r.Use(app.TokenAuthMiddleware)
+				// r.Use(app.usersContextMiddleware)
 
 				r.Get("/", app.getUserHandler)
 				r.Put("/follow", app.followUserHandler)
@@ -123,6 +133,7 @@ func (app *application) mount() http.Handler {
 		// public route
 		r.Route("/authentication", func(r chi.Router) {
 			r.Post("/user", app.registerUserHandler)
+			r.Post("/token", app.createTokenHandler)
 		})
 	})
 	return r

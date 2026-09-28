@@ -4,11 +4,14 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"social/internal/store"
+	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
@@ -21,6 +24,11 @@ type RegisterUserPayload struct {
 type UserWithToken struct {
 	store.User
 	token string
+}
+
+type CreateTokenPayload struct {
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required"`
 }
 
 // registerUserHandler godoc
@@ -124,3 +132,58 @@ func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 }
+
+func (app *application) createTokenHandler(w http.ResponseWriter, r *http.Request) {
+	// get the entered login and password
+	var payload CreateTokenPayload
+	if err := readJson(w, r, &payload); err != nil {
+		app.internalServerError(w, r, err)
+		return
+	}
+
+	// validate
+	if err := validate.Struct(payload); err != nil {
+		app.badRequestError(w, r, err)
+		return
+	}
+
+	// get the user
+	ctx := r.Context()
+	user, err := app.store.Users.GetByEmail(ctx, payload.Email)
+	if err != nil {
+		switch {
+		case errors.Is(err, store.ErrNotFound):
+			app.notFoundError(w, r, err)
+		default:
+			app.internalServerError(w, r, err)
+		}
+		return
+	}
+
+	// generate token
+	claims := jwt.RegisteredClaims{
+		Issuer:    app.config.auth.tokenAuth.iss,
+		Audience:  jwt.ClaimStrings{app.config.auth.tokenAuth.iss},
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(app.config.auth.tokenAuth.exp)),
+		Subject:   fmt.Sprint(user.Id),
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+		NotBefore: jwt.NewNumericDate(time.Now()),
+	}
+	token, err := app.authenticator.GenerateToken(claims)
+	if err != nil {
+		app.internalServerError(w, r, err)
+		return
+	}
+
+	output := struct {
+		Token string `json:"token"`
+	}{
+		Token: token,
+	}
+
+	if err := jsonResponse(w, http.StatusCreated, output); err != nil {
+		app.internalServerError(w, r, err)
+		return
+	}
+}
+

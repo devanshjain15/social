@@ -1,11 +1,52 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
+
+	"github.com/golang-jwt/jwt/v5"
 )
+
+func (app *application) TokenAuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		header := r.Header.Get("Authorization")
+		if header == "" {
+			app.unauthroizedAccessError(w, r, fmt.Errorf("No Authorization header!"))
+			return
+		}
+		parts := strings.Split(header, " ")
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			app.unauthroizedAccessError(w, r, fmt.Errorf("Authorization header is malformed!"))
+			return
+		}
+		token := parts[1]
+		jwtToken, err := app.authenticator.ValidateToken(token)
+		if err != nil {
+			app.unauthroizedAccessError(w, r, err)
+			return
+		}
+		claims, _ := jwtToken.Claims.(jwt.MapClaims)
+		userIdString, _ := claims.GetSubject()
+		userId, err := strconv.ParseInt(userIdString, 10, 64)
+		if err != nil {
+			app.unauthroizedAccessError(w, r, err)
+			return
+		}
+		ctx := r.Context()
+		user, err := app.store.Users.GetById(ctx, userId)
+		if err != nil {
+			app.unauthroizedAccessError(w, r, err)
+			return
+		}
+
+		ctx = context.WithValue(ctx, userCtxKey, user)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
 
 func (app *application) BasicAuthMiddleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {

@@ -4,6 +4,7 @@ import (
 	"log"
 	"time"
 
+	"social/internal/auth"
 	"social/internal/db"
 	"social/internal/env"
 	"social/internal/mailer"
@@ -53,6 +54,11 @@ func main() {
 				username: env.GetString("BASIC_AUTH_USERNAME", ""),
 				password: env.GetString("BASIC_AUTH_PASSWORD", ""),
 			},
+			tokenAuth: tokenAuthConfig{
+				secret: env.GetString("JWT_SECRET", ""),
+				iss:    "gophersocial",
+				exp:    time.Hour * 24 * 30,
+			},
 		},
 		frontendURL: env.GetString("FRONTEND_URL", "localhost:3000"),
 	}
@@ -71,11 +77,13 @@ func main() {
 	store := store.NewStorage(db)
 
 	mailerClient := mailer.NewMailTrapClient(config.mail.mailTrap.apiKey, config.mail.fromEmail)
+	authentictor := auth.NewJWTAuthentictor(config.auth.tokenAuth.secret, config.auth.tokenAuth.iss, config.auth.tokenAuth.iss)
 	app := &application{
-		config: config,
-		store:  store,
-		logger: logger,
-		mailer: mailerClient,
+		config:        config,
+		store:         store,
+		logger:        logger,
+		mailer:        mailerClient,
+		authenticator: authentictor,
 	}
 	mux := app.mount()
 	log.Fatal(app.run(mux))

@@ -37,14 +37,9 @@ func (app *application) followUserHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var payload FollowUserPayload
-	if err := readJson(w, r, &payload); err != nil {
-		app.badRequestError(w, r, err)
-		return
-	}
-
 	ctx := r.Context()
-	if err := app.store.Followers.Follow(ctx, payload.UserId, followerId); err != nil {
+	user := getUserFromCtx(r)
+	if err := app.store.Followers.Follow(ctx, user.Id, followerId); err != nil {
 		switch {
 		case errors.Is(err, store.ErrConflict):
 			app.conflictResponse(w, r, err)
@@ -54,9 +49,7 @@ func (app *application) followUserHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if err := jsonResponse(w, http.StatusNoContent, nil); err != nil {
-		app.internalServerError(w, r, err)
-	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (app *application) unfollowUserHandler(w http.ResponseWriter, r *http.Request) {

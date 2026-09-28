@@ -78,11 +78,36 @@ func (s *UserStore) Create(ctx context.Context, tx *sql.Tx, user *User) error {
 	return nil
 }
 
+func (s *UserStore) GetByEmail(ctx context.Context, email string) (*User, error) {
+	query := `
+		SELECT id, username, email, created_at 
+		FROM USERS 
+		WHERE email = $1 AND is_active = true
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
+	defer cancel()
+
+	user := &User{}
+
+	err := s.db.QueryRowContext(ctx, query, email).Scan(&user.Id, &user.Username, &user.Email, &user.CreatedAt)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrNotFound
+		default:
+			return nil, err
+		}
+	}
+
+	return user, nil
+}
+
 func (s *UserStore) GetById(ctx context.Context, userId int64) (*User, error) {
 	query := `
 		SELECT id, username, email, created_at 
 		FROM USERS 
-		WHERE id = $1
+		WHERE id = $1 AND is_active = true
 	`
 
 	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)

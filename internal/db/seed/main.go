@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	addr := env.GetString("DB_ADDR", "postgres://admin:secret@localhost:5433/social?sslmode=disable")
+	addr := env.GetString("DB_ADDR", "")
 	maxOpenConns := env.GetInt("DB_MAX_OPEN_CONNS", 30)
 	maxIdleConns := env.GetInt("DB_MAX_OPEN_CONNS", 30)
 	maxIdleTime := env.GetString("DB_MAX_IDLE_TIME", "15m")
