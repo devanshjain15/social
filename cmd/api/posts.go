@@ -26,6 +26,7 @@ type updatePostPayload struct {
 }
 
 func (app *application) createPostHandler(w http.ResponseWriter, r *http.Request) {
+	user := getUserFromCtx(r)
 	var payload createPostPayload
 	if err := readJson(w, r, &payload); err != nil {
 		app.badRequestError(w, r, err)
@@ -41,8 +42,7 @@ func (app *application) createPostHandler(w http.ResponseWriter, r *http.Request
 		Title:   payload.Title,
 		Content: payload.Content,
 		Tags:    payload.Tags,
-		// TODO: change after auth
-		UserId: 1,
+		UserId: user.Id,
 	}
 
 	// why this context?

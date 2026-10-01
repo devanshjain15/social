@@ -6,6 +6,7 @@ import (
 )
 
 func (app *application) getUserFeedHandler(w http.ResponseWriter, r *http.Request) {
+	user := getUserFromCtx(r)
 	fq := store.PaginatedFeedQuery{
 		Limit:  10,
 		Offset: 0,
@@ -22,7 +23,7 @@ func (app *application) getUserFeedHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	userId := 5
+	userId := user.Id
 	ctx := r.Context()
 	feed, err := app.store.Posts.GetUserFeed(ctx, int64(userId), fq)
 	if err != nil {

@@ -59,6 +59,9 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 	user.Username = payload.Username
 	user.Email = payload.Email
 	user.Password.Set(payload.Password)
+	user.Role = store.Role{
+		Name: "admin",
+	}
 
 	token := uuid.New().String()
 	log.Print(token)
@@ -186,4 +189,3 @@ func (app *application) createTokenHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 }
-
