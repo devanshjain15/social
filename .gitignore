@@ -17,7 +17,7 @@ go.work
 go.work.sum
 
 # Environment / secrets
-.envrc
+# .envrc
 .env
 .env.*
 !.env.example
@@ -34,7 +34,7 @@ tmp/
 temp/
 
 # Air live-reload files
-.air.toml
+# .air.toml
 .air/
 
 # OS files
