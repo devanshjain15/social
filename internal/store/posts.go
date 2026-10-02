@@ -51,14 +51,22 @@ func (s *PostStore) Create(ctx context.Context, post *Post) error {
 func (s *PostStore) GetById(ctx context.Context, postId int64) (*Post, error) {
 	var post Post
 	query := `
-		SELECT id, title, content, user_id, created_at, tags, updated_at, version FROM POSTS 
-		WHERE id = $1
+		SELECT
+			p.id, p.title, p.content, p.user_id, p.created_at, p.tags, p.updated_at, p.version,
+			u.id, u.username, u.email, u.created_at
+		FROM POSTS p
+		LEFT JOIN users u ON p.user_id = u.id
+		WHERE p.id = $1
 	`
 
 	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
 	defer cancel()
 
-	err := s.db.QueryRowContext(ctx, query, postId).Scan(&post.Id, &post.Title, &post.Content, &post.UserId, &post.CreatedAt, pq.Array(&post.Tags), &post.UpdatedAt, &post.Version)
+	var user User
+	err := s.db.QueryRowContext(ctx, query, postId).Scan(
+		&post.Id, &post.Title, &post.Content, &post.UserId, &post.CreatedAt, pq.Array(&post.Tags), &post.UpdatedAt, &post.Version,
+		&user.Id, &user.Username, &user.Email, &user.CreatedAt,
+	)
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
@@ -67,6 +75,7 @@ func (s *PostStore) GetById(ctx context.Context, postId int64) (*Post, error) {
 			return nil, err
 		}
 	}
+	post.User = user
 	return &post, nil
 }
 

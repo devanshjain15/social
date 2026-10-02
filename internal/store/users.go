@@ -15,14 +15,15 @@ var (
 )
 
 type User struct {
-	Id        int64    `json:"id"`
-	Username  string   `json:"username"`
-	Email     string   `json:"email"`
-	Password  Password `json:"-"`
-	CreatedAt string   `json:"created_at"`
-	IsActive  bool     `json:"is_active"`
-	RoleId    int64    `json:"role_id"`
-	Role      Role     `json:"role"`
+	Id          int64    `json:"id"`
+	Username    string   `json:"username"`
+	Email       string   `json:"email"`
+	Password    Password `json:"-"`
+	CreatedAt   string   `json:"created_at"`
+	IsActive    bool     `json:"is_active"`
+	RoleId      int64    `json:"role_id"`
+	Role        Role     `json:"role"`
+	IsFollowing bool     `json:"is_following,omitempty"`
 }
 
 type Password struct {
@@ -305,4 +306,43 @@ func (s *UserStore) createUserInvite(ctx context.Context, tx *sql.Tx, userId int
 	}
 
 	return nil
+}
+
+func (s *UserStore) GetAll(ctx context.Context) ([]User, error) {
+	query := `
+		SELECT id, username, email, created_at, is_active
+		FROM users
+		ORDER BY created_at DESC
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
+	defer cancel()
+
+	rows, err := s.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []User
+	for rows.Next() {
+		var user User
+		err := rows.Scan(
+			&user.Id,
+			&user.Username,
+			&user.Email,
+			&user.CreatedAt,
+			&user.IsActive,
+		)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
 }

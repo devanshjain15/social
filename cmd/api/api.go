@@ -78,13 +78,12 @@ func (app *application) mount() http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"https://*", "http://*"},
-		AllowOriginFunc:  func(r *http.Request, origin string) bool { return true },
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedOrigins:   []string{"http://localhost:5173", "http://localhost:3000"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
-		AllowCredentials: false,
-		MaxAge:           300, // Maximum value not ignored by any of major browsers
+		AllowCredentials: true, // ✅ Required for cookies!
+		MaxAge:           300,
 	}))
 
 	r.Use(middleware.RequestID)
@@ -113,20 +112,23 @@ func (app *application) mount() http.Handler {
 				r.Get("/", app.getPostHandler)
 				r.Delete("/", app.checkPostOwnership("admin", app.deletePostHandler))
 				r.Patch("/", app.checkPostOwnership("moderator", app.updatePostHandler))
+				r.Post("/comments", app.createCommentHandler)
 			})
 		})
 		r.Route("/users", func(r chi.Router) {
 			r.Put("/activate/{token}", app.activateUserHandler)
-			r.Route("/{userId}", func(r chi.Router) {
-				r.Use(app.tokenAuthMiddleware)
-				r.Get("/", app.getUserHandler)
-				r.Put("/follow", app.followUserHandler)
-				r.Put("/unfollow", app.unfollowUserHandler)
-			})
 
 			r.Group(func(r chi.Router) {
 				r.Use(app.tokenAuthMiddleware)
+				r.Get("/", app.getAllUsersHandler)
 				r.Get("/feed", app.getUserFeedHandler)
+
+				r.Route("/{userId}", func(r chi.Router) {
+					r.Use(app.usersContextMiddleware)
+					r.Get("/", app.getUserHandler)
+					r.Put("/follow", app.followUserHandler)
+					r.Put("/unfollow", app.unfollowUserHandler)
+				})
 			})
 		})
 
@@ -134,6 +136,7 @@ func (app *application) mount() http.Handler {
 		r.Route("/authentication", func(r chi.Router) {
 			r.Post("/user", app.registerUserHandler)
 			r.Post("/token", app.createTokenHandler)
+			r.Post("/logout", app.logoutHandler)
 		})
 	})
 	return r

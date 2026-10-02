@@ -14,17 +14,31 @@ import (
 
 func (app *application) tokenAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var token string
+
+		// Try to get token from Authorization header first
 		header := r.Header.Get("Authorization")
-		if header == "" {
-			app.unauthroizedAccessError(w, r, fmt.Errorf("No Authorization header!"))
+		if header != "" {
+			parts := strings.Split(header, " ")
+			if len(parts) == 2 && parts[0] == "Bearer" {
+				token = parts[1]
+			}
+		}
+
+		// If no header token, try to get from cookie
+		if token == "" {
+			cookie, err := r.Cookie("auth_token")
+			if err == nil {
+				token = cookie.Value
+			}
+		}
+
+		// If still no token, return unauthorized
+		if token == "" {
+			app.unauthroizedAccessError(w, r, fmt.Errorf("No Authorization header or cookie!"))
 			return
 		}
-		parts := strings.Split(header, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			app.unauthroizedAccessError(w, r, fmt.Errorf("Authorization header is malformed!"))
-			return
-		}
-		token := parts[1]
+
 		jwtToken, err := app.authenticator.ValidateToken(token)
 		if err != nil {
 			app.unauthroizedAccessError(w, r, err)

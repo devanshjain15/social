@@ -13,6 +13,7 @@ import (
 type userCtx string
 
 const userCtxKey userCtx = "user"
+const targetUserCtxKey userCtx = "targetUser"
 
 type FollowUserPayload struct {
 	UserId int64 `json:"user_id"`
@@ -23,23 +24,21 @@ type UnfollowUserPayload struct {
 }
 
 func (app *application) getUserHandler(w http.ResponseWriter, r *http.Request) {
-	user := getUserFromCtx(r)
+	user := getTargetUserFromCtx(r)
 	if err := jsonResponse(w, http.StatusOK, user); err != nil {
 		app.internalServerError(w, r, err)
 	}
 }
 
 func (app *application) followUserHandler(w http.ResponseWriter, r *http.Request) {
-	param := chi.URLParam(r, "userId")
-	followerId, err := strconv.ParseInt(param, 10, 64)
-	if err != nil {
-		app.badRequestError(w, r, err)
-		return
-	}
+	// Get the user to follow from the target user context (set by usersContextMiddleware)
+	userToFollow := getTargetUserFromCtx(r)
+
+	// Get the current authenticated user
+	currentUser := getUserFromCtx(r)
 
 	ctx := r.Context()
-	user := getUserFromCtx(r)
-	if err := app.store.Followers.Follow(ctx, user.Id, followerId); err != nil {
+	if err := app.store.Followers.Follow(ctx, currentUser.Id, userToFollow.Id); err != nil {
 		switch {
 		case errors.Is(err, store.ErrConflict):
 			app.conflictResponse(w, r, err)
@@ -53,28 +52,19 @@ func (app *application) followUserHandler(w http.ResponseWriter, r *http.Request
 }
 
 func (app *application) unfollowUserHandler(w http.ResponseWriter, r *http.Request) {
-	param := chi.URLParam(r, "userId")
-	followerId, err := strconv.ParseInt(param, 10, 64)
-	if err != nil {
-		app.badRequestError(w, r, err)
-		return
-	}
+	// Get the user to unfollow from the target user context (set by usersContextMiddleware)
+	userToUnfollow := getTargetUserFromCtx(r)
 
-	var payload FollowUserPayload
-	if err := readJson(w, r, &payload); err != nil {
-		app.badRequestError(w, r, err)
-		return
-	}
+	// Get the current authenticated user
+	currentUser := getUserFromCtx(r)
 
 	ctx := r.Context()
-	if err := app.store.Followers.Unfollow(ctx, payload.UserId, followerId); err != nil {
+	if err := app.store.Followers.Unfollow(ctx, currentUser.Id, userToUnfollow.Id); err != nil {
 		app.internalServerError(w, r, err)
 		return
 	}
 
-	if err := jsonResponse(w, http.StatusNoContent, nil); err != nil {
-		app.internalServerError(w, r, err)
-	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (app *application) usersContextMiddleware(next http.Handler) http.Handler {
@@ -98,11 +88,15 @@ func (app *application) usersContextMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx = context.WithValue(ctx, userCtxKey, user)
+		ctx = context.WithValue(ctx, targetUserCtxKey, user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
 func getUserFromCtx(r *http.Request) *store.User {
 	return r.Context().Value(userCtxKey).(*store.User)
+}
+
+func getTargetUserFromCtx(r *http.Request) *store.User {
+	return r.Context().Value(targetUserCtxKey).(*store.User)
 }

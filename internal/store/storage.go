@@ -24,6 +24,7 @@ type Storage struct {
 	}
 
 	Users interface {
+		GetAll(context.Context) ([]User, error)
 		GetById(context.Context, int64) (*User, error)
 		GetByEmail(ctx context.Context, email string) (*User, error)
 		Create(context.Context, *sql.Tx, *User) error
@@ -41,6 +42,7 @@ type Storage struct {
 	Followers interface {
 		Follow(context.Context, int64, int64) error
 		Unfollow(context.Context, int64, int64) error
+		IsFollowing(context.Context, int64, int64) (bool, error)
 	}
 
 	Roles interface {

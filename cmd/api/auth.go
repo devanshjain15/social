@@ -82,12 +82,17 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// userWithToken := UserWithToken{
-	// 	User:  user,
-	// 	token: token,
-	// }
+	activationURL := fmt.Sprintf("%s/confirm/%s", app.config.frontendURL, token)
 
-	// activationURL := fmt.Sprintf("%s/confirm/%s", app.config.frontendURL, token)
+	// Return the activation token for development/testing
+	// In production, this would be sent via email instead
+	response := map[string]interface{}{
+		"message":          "User registered successfully. Please activate your account.",
+		"activation_url":   activationURL,
+		"activation_token": token,
+	}
+
+	// Uncomment below to send email in production
 	// isProdEnv := app.config.env == "production"
 	// vars := struct {
 	// 	Username      string
@@ -104,12 +109,11 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 	// 	if err != nil {
 	// 		app.logger.Errorw("error deleting user", "error", err)
 	// 	}
-
 	// 	app.internalServerError(w, r, err)
 	// 	return
 	// }
 
-	if err := jsonResponse(w, http.StatusCreated, nil); err != nil {
+	if err := jsonResponse(w, http.StatusCreated, response); err != nil {
 		app.internalServerError(w, r, err)
 	}
 }
@@ -179,10 +183,27 @@ func (app *application) createTokenHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	output := struct {
-		Token string `json:"token"`
+		Token string                 `json:"token"`
+		User  map[string]interface{} `json:"user"`
 	}{
 		Token: token,
+		User: map[string]interface{}{
+			"id":       user.Id,
+			"username": user.Username,
+			"email":    user.Email,
+		},
 	}
+
+	// Set HTTP-only cookie for secure token storage
+	http.SetCookie(w, &http.Cookie{
+		Name:     "auth_token",
+		Value:    token,
+		Path:     "/",
+		MaxAge:   int(app.config.auth.tokenAuth.exp.Seconds()),
+		HttpOnly: true,
+		Secure:   app.config.env == "production",
+		SameSite: http.SameSiteLaxMode,
+	})
 
 	if err := jsonResponse(w, http.StatusCreated, output); err != nil {
 		app.internalServerError(w, r, err)
