@@ -6,6 +6,7 @@ import (
 	"social/internal/auth"
 	"social/internal/mailer"
 	"social/internal/store"
+	"social/internal/store/cache"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -21,6 +22,7 @@ import (
 type application struct {
 	config        config
 	store         store.Storage
+	cache         cache.Storage
 	logger        *zap.SugaredLogger
 	mailer        mailer.Client
 	authenticator auth.Authentictor
@@ -34,6 +36,14 @@ type config struct {
 	mail        mailConfig
 	frontendURL string
 	auth        authConfig
+	redis       redisConfig
+}
+
+type redisConfig struct {
+	Addr    string
+	Pw      string
+	DB      int
+	enabled bool
 }
 
 type dbConfig struct {
@@ -92,9 +102,6 @@ func (app *application) mount() http.Handler {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Logger)
 
-	// Set a timeout value on the request context (ctx), that will signal
-	// through ctx.Done() that the request has timed out and further
-	// processing should be stopped.
 	r.Use(middleware.Timeout(60 * time.Second))
 
 	r.Route("/v1", func(r chi.Router) {
@@ -119,6 +126,7 @@ func (app *application) mount() http.Handler {
 			r.Put("/activate/{token}", app.activateUserHandler)
 			r.Route("/{userId}", func(r chi.Router) {
 				r.Use(app.tokenAuthMiddleware)
+				r.Use(app.usersContextMiddleware)
 				r.Get("/", app.getUserHandler)
 				r.Put("/follow", app.followUserHandler)
 				r.Put("/unfollow", app.unfollowUserHandler)

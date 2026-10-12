@@ -87,7 +87,7 @@ func (app *application) usersContextMiddleware(next http.Handler) http.Handler {
 		}
 
 		ctx := r.Context()
-		user, err := app.store.Users.GetById(ctx, userId)
+		user, err := app.getUser(ctx, userId)
 		if err != nil {
 			switch {
 			case errors.Is(err, store.ErrNotFound):

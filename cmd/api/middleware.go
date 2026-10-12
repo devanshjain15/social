@@ -38,7 +38,7 @@ func (app *application) tokenAuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		ctx := r.Context()
-		user, err := app.store.Users.GetById(ctx, userId)
+		user, err := app.getUser(ctx, userId)
 		if err != nil {
 			app.unauthroizedAccessError(w, r, err)
 			return
@@ -121,4 +121,34 @@ func (app *application) checkRolePrecedence(ctx context.Context, user *store.Use
 	}
 
 	return user.Role.Level >= role.Level, nil
+}
+
+func (app *application) getUser(ctx context.Context, userId int64) (*store.User, error) {
+	if !app.config.redis.enabled {
+		return app.store.Users.GetById(ctx, userId)
+	}
+
+	app.logger.Infof("Checking cache")
+	user, err := app.cache.User.Get(ctx, userId)
+	if err != nil {
+		return nil, err
+	}
+	if user != nil {
+		app.logger.Infof("Cache hit!")
+		return user, nil
+	}
+	app.logger.Infof("Cache miss")
+
+	app.logger.Infof("Fetching user from DB")
+	user, err = app.store.Users.GetById(ctx, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	err = app.cache.User.Set(ctx, user)
+	if err != nil {
+		app.logger.Errorw("error while setting value on cache")
+	}
+
+	return user, nil
 }

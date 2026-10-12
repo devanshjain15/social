@@ -9,7 +9,9 @@ import (
 	"social/internal/env"
 	"social/internal/mailer"
 	"social/internal/store"
+	"social/internal/store/cache"
 
+	redis "github.com/go-redis/redis/v8"
 	"go.uber.org/zap"
 )
 
@@ -40,6 +42,12 @@ func main() {
 			maxOpenConns: env.GetInt("DB_MAX_OPEN_CONNS", 30),
 			maxIdleConns: env.GetInt("DB_MAX_OPEN_CONNS", 30),
 			maxIdleTime:  env.GetString("DB_MAX_IDLE_TIME", "15m"),
+		},
+		redis: redisConfig{
+			Addr:    env.GetString("REDIS_ADDR", "localhost:6380"),
+			Pw:      env.GetString("REDIS_PASSWORD", ""),
+			DB:      env.GetInt("REDIS_DB", 0),
+			enabled: env.GetBool("REDIS_ENABLED", true),
 		},
 		env: env.GetString("ENV", "PRODUCTION"),
 		mail: mailConfig{
@@ -74,13 +82,20 @@ func main() {
 	}
 	defer db.Close()
 
+	var rdb *redis.Client
+	if config.redis.enabled {
+		rdb = cache.NewRedisClient(config.redis.Addr, config.redis.Pw, config.redis.DB)
+	}
+
 	store := store.NewStorage(db)
+	cacheStorage := cache.NewCacheStorage(rdb)
 
 	mailerClient := mailer.NewMailTrapClient(config.mail.mailTrap.apiKey, config.mail.fromEmail)
 	authentictor := auth.NewJWTAuthentictor(config.auth.tokenAuth.secret, config.auth.tokenAuth.iss, config.auth.tokenAuth.iss)
 	app := &application{
 		config:        config,
 		store:         store,
+		cache:         cacheStorage,
 		logger:        logger,
 		mailer:        mailerClient,
 		authenticator: authentictor,
