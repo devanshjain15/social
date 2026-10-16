@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"social/internal/auth"
 	"social/internal/mailer"
+	"social/internal/ratelimiter"
 	"social/internal/store"
 	"social/internal/store/cache"
 	"time"
@@ -26,6 +27,7 @@ type application struct {
 	logger        *zap.SugaredLogger
 	mailer        mailer.Client
 	authenticator auth.Authentictor
+	ratelimiter   ratelimiter.Limiter
 }
 
 type config struct {
@@ -37,6 +39,7 @@ type config struct {
 	frontendURL string
 	auth        authConfig
 	redis       redisConfig
+	ratelimiter ratelimiter.Config
 }
 
 type redisConfig struct {
@@ -101,6 +104,7 @@ func (app *application) mount() http.Handler {
 	r.Use(middleware.ClientIPFromRemoteAddr)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Logger)
+	r.Use(app.RateLimiterMiddleware)
 
 	r.Use(middleware.Timeout(60 * time.Second))
 
@@ -109,7 +113,7 @@ func (app *application) mount() http.Handler {
 		r.Get("/swagger/*", httpSwagger.Handler(
 			httpSwagger.URL(docsUrl),
 		))
-		r.With(app.basicAuthMiddleware()).Get("/health", app.healthCheckHandler)
+		r.Get("/health", app.healthCheckHandler)
 		r.Route("/posts", func(r chi.Router) {
 			r.Use(app.tokenAuthMiddleware)
 			r.Post("/", app.createPostHandler)

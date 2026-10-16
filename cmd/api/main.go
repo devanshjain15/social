@@ -8,6 +8,7 @@ import (
 	"social/internal/db"
 	"social/internal/env"
 	"social/internal/mailer"
+	"social/internal/ratelimiter"
 	"social/internal/store"
 	"social/internal/store/cache"
 
@@ -68,6 +69,11 @@ func main() {
 				exp:    time.Hour * 24 * 30,
 			},
 		},
+		ratelimiter: ratelimiter.Config{
+			RequestsPerTimeFrame: env.GetInt("RATELIMITER_REQUESTS_COUNT", 20),
+			TimeFrame:            time.Second * 5,
+			Enabled:              env.GetBool("RATE_LIMITER_ENABLED", true),
+		},
 		frontendURL: env.GetString("FRONTEND_URL", "localhost:3000"),
 	}
 
@@ -92,6 +98,9 @@ func main() {
 
 	mailerClient := mailer.NewMailTrapClient(config.mail.mailTrap.apiKey, config.mail.fromEmail)
 	authentictor := auth.NewJWTAuthentictor(config.auth.tokenAuth.secret, config.auth.tokenAuth.iss, config.auth.tokenAuth.iss)
+
+	rl := ratelimiter.NewFixedWindowLimiter(config.ratelimiter.RequestsPerTimeFrame, config.ratelimiter.TimeFrame)
+
 	app := &application{
 		config:        config,
 		store:         store,
@@ -99,6 +108,7 @@ func main() {
 		logger:        logger,
 		mailer:        mailerClient,
 		authenticator: authentictor,
+		ratelimiter: rl,
 	}
 	mux := app.mount()
 	log.Fatal(app.run(mux))
