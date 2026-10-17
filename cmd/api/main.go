@@ -1,7 +1,9 @@
 package main
 
 import (
+	"expvar"
 	"log"
+	"runtime"
 	"time"
 
 	"social/internal/auth"
@@ -108,8 +110,17 @@ func main() {
 		logger:        logger,
 		mailer:        mailerClient,
 		authenticator: authentictor,
-		ratelimiter: rl,
+		ratelimiter:   rl,
 	}
+
+	expvar.NewString("version").Set(VERSION)
+	expvar.Publish("database", expvar.Func(func() any {
+		return db.Stats()
+	}))
+	expvar.Publish("goroutines", expvar.Func(func() any {
+		return runtime.NumGoroutine()
+	}))
+
 	mux := app.mount()
 	log.Fatal(app.run(mux))
 }
