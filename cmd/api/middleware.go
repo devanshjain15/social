@@ -16,12 +16,12 @@ func (app *application) tokenAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		header := r.Header.Get("Authorization")
 		if header == "" {
-			app.unauthroizedAccessError(w, r, fmt.Errorf("No Authorization header!"))
+			app.unauthroizedAccessError(w, r, fmt.Errorf("no authorization header"))
 			return
 		}
 		parts := strings.Split(header, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
-			app.unauthroizedAccessError(w, r, fmt.Errorf("Authorization header is malformed!"))
+			app.unauthroizedAccessError(w, r, fmt.Errorf("authorization header is malformed"))
 			return
 		}
 		token := parts[1]
@@ -106,7 +106,7 @@ func (app *application) checkPostOwnership(requiredRole string, next http.Handle
 		app.logger.Info(user.Id)
 
 		if !allowed {
-			app.forbiddenError(w, r, fmt.Errorf("User cannot perform this action lower role level!"))
+			app.forbiddenError(w, r, fmt.Errorf("user cannot perform this action lower role level"))
 			return
 		}
 

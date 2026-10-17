@@ -21,10 +21,10 @@ type RegisterUserPayload struct {
 	Password string `json:"password" validate:"required,min=8,max=24"`
 }
 
-type UserWithToken struct {
-	store.User
-	token string
-}
+// type UserWithToken struct {
+// 	store.User
+// 	token string
+// }
 
 type CreateTokenPayload struct {
 	Email    string `json:"email" validate:"required,email"`

@@ -61,8 +61,8 @@ type dbConfig struct {
 type mailConfig struct {
 	exp       time.Duration
 	fromEmail string
-	sendGrid  sendGridConfig
-	mailTrap  mailTrapConfig
+	// sendGrid  sendGridConfig
+	mailTrap mailTrapConfig
 }
 
 type authConfig struct {
@@ -81,9 +81,9 @@ type tokenAuthConfig struct {
 	exp    time.Duration
 }
 
-type sendGridConfig struct {
-	apiKey string
-}
+// type sendGridConfig struct {
+// 	apiKey string
+// }
 
 type mailTrapConfig struct {
 	apiKey string
