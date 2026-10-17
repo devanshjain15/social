@@ -3,6 +3,8 @@ package main
 import (
 	"net/http"
 	"net/http/httptest"
+	"social/internal/auth"
+	"social/internal/env"
 	"social/internal/store"
 	"social/internal/store/cache"
 	"testing"
@@ -12,9 +14,10 @@ import (
 
 func NewTestApplication() *application {
 	return &application{
-		logger: zap.NewNop().Sugar(),
-		store:  store.NewMockStorage(),
-		cache:  cache.NewMockCacheStorage(),
+		logger:        zap.NewNop().Sugar(),
+		store:         store.NewMockStorage(),
+		cache:         cache.NewMockCacheStorage(),
+		authenticator: auth.NewJWTAuthentictor(env.GetString("JWT_SECRET", ""), "gophersocial", "gophersocial"),
 	}
 }
 

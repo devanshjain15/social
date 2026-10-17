@@ -26,6 +26,6 @@ func TestGetUser(t *testing.T) {
 		}
 		request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnb3BoZXJzb2NpYWwiLCJzdWIiOiIxMDEiLCJhdWQiOlsiZ29waGVyc29jaWFsIl0sImV4cCI6MTc5MzE5NjU5MCwibmJmIjoxNzkwNjA0NTkwLCJpYXQiOjE3OTA2MDQ1OTB9.WDYzxVBNv8EB8fBsWZ3F50VSQnuxTEqtoW-0_FIlhQs"))
 		rr := execRequest(request, mux)
-		checkResponseCode(t, http.StatusUnauthorized, rr.Code)
+		checkResponseCode(t, http.StatusOK, rr.Code)
 	})
 }
